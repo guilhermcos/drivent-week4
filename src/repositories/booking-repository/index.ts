@@ -23,8 +23,32 @@ async function findBookingWithRooms(userId: number) {
   return result;
 }
 
+async function createBooking(userId: number, roomId: number) {
+  const booking = await prisma.booking.create({
+    data: {
+      userId: userId,
+      roomId: roomId,
+    },
+    select: {
+      id: true,
+    },
+  });
+  return booking.id;
+}
+
+async function countBookingsByRoomId(roomId: number) {
+  const count = await prisma.booking.count({
+    where: {
+      roomId: roomId,
+    },
+  });
+  return count;
+}
+
 const bookingRepository = {
   findBookingWithRooms,
+  createBooking,
+  countBookingsByRoomId,
 };
 
 export default bookingRepository;

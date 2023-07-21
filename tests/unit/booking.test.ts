@@ -1,7 +1,16 @@
 import { bookingService } from '@/services';
 import bookingRepository from '@/repositories/booking-repository';
+import enrollmentRepository from '@/repositories/enrollment-repository';
+import ticketsRepository from '@/repositories/tickets-repository';
+import { TicketStatus } from '@prisma/client';
+import roomRepository from '@/repositories/room-repository';
+import { buildEnrollmentWithAdress, buildRoom, buildTicket, buildTicketType } from '../factories';
 
-describe('Booking unit tests', () => {
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
+describe('GET Booking unit tests', () => {
   it('should return correct booking info', async () => {
     jest.spyOn(bookingRepository, 'findBookingWithRooms').mockImplementation((): any => {
       return {
@@ -32,5 +41,43 @@ describe('Booking unit tests', () => {
         },
       }),
     );
+  });
+
+  it('Should return status code 404 when no booking found on database', async () => {
+    jest.spyOn(bookingRepository, 'findBookingWithRooms').mockImplementation((): any => {
+      return null;
+    });
+
+    const result = bookingService.getBooking(1);
+
+    expect(result).rejects.toEqual(
+      expect.objectContaining({
+        name: 'NotFoundError',
+      }),
+    );
+  });
+});
+
+describe('POST /booking unit tests', () => {
+  it('should return with booking id created when all right', async () => {
+    const ticketType = buildTicketType();
+    const enrollment = buildEnrollmentWithAdress();
+    const bookingId = 4;
+    const room = buildRoom();
+    const countBookingsByRoom = room.capacity - 2;
+
+    jest.spyOn(enrollmentRepository, 'findWithAddressByUserId').mockResolvedValue(enrollment);
+    jest
+      .spyOn(ticketsRepository, 'findTicketByEnrollmentId')
+      .mockResolvedValue(buildTicket(enrollment.id, TicketStatus.PAID, ticketType));
+    jest.spyOn(roomRepository, 'getRoomById').mockResolvedValue(room);
+    jest.spyOn(bookingRepository, 'countBookingsByRoomId').mockResolvedValue(countBookingsByRoom);
+    jest.spyOn(bookingRepository, 'createBooking').mockResolvedValue(bookingId);
+
+    const userId = enrollment.userId;
+    const roomId = room.id;
+    const result = await bookingService.createBooking(userId, roomId);
+
+    expect(result).toBe(bookingId);
   });
 });
