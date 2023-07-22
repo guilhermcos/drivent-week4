@@ -80,4 +80,82 @@ describe('POST /booking unit tests', () => {
 
     expect(result).toBe(bookingId);
   });
+
+  it('should throw Not Found room not found', async () => {
+    const ticketType = buildTicketType();
+    const enrollment = buildEnrollmentWithAdress();
+    const bookingId = 4;
+    const room: any = null;
+    const countBookingsByRoom = room?.capacity - 2;
+
+    jest.spyOn(enrollmentRepository, 'findWithAddressByUserId').mockResolvedValue(enrollment);
+    jest
+      .spyOn(ticketsRepository, 'findTicketByEnrollmentId')
+      .mockResolvedValue(buildTicket(enrollment.id, TicketStatus.PAID, ticketType));
+    jest.spyOn(roomRepository, 'getRoomById').mockResolvedValue(room);
+    jest.spyOn(bookingRepository, 'countBookingsByRoomId').mockResolvedValue(countBookingsByRoom);
+    jest.spyOn(bookingRepository, 'createBooking').mockResolvedValue(bookingId);
+
+    const userId = enrollment.userId;
+    const roomId = room?.id;
+    const promise = bookingService.createBooking(userId, roomId);
+
+    expect(promise).rejects.toEqual(
+      expect.objectContaining({
+        name: 'NotFoundError',
+      }),
+    );
+  });
+
+  it('should throw Forbidden when unpaid ticket', async () => {
+    const ticketType = buildTicketType();
+    const enrollment = buildEnrollmentWithAdress();
+    const bookingId = 4;
+    const room = buildRoom();
+    const countBookingsByRoom = room?.capacity - 2;
+
+    jest.spyOn(enrollmentRepository, 'findWithAddressByUserId').mockResolvedValue(enrollment);
+    jest
+      .spyOn(ticketsRepository, 'findTicketByEnrollmentId')
+      .mockResolvedValue(buildTicket(enrollment.id, TicketStatus.RESERVED, ticketType));
+    jest.spyOn(roomRepository, 'getRoomById').mockResolvedValue(room);
+    jest.spyOn(bookingRepository, 'countBookingsByRoomId').mockResolvedValue(countBookingsByRoom);
+    jest.spyOn(bookingRepository, 'createBooking').mockResolvedValue(bookingId);
+
+    const userId = enrollment.userId;
+    const roomId = room?.id;
+    const promise = bookingService.createBooking(userId, roomId);
+
+    expect(promise).rejects.toEqual(
+      expect.objectContaining({
+        name: 'ForbiddenError',
+      }),
+    );
+  });
+
+  it('should throw Forbidden when room out of capacity', async () => {
+    const ticketType = buildTicketType();
+    const enrollment = buildEnrollmentWithAdress();
+    const bookingId = 4;
+    const room = buildRoom();
+    const countBookingsByRoom = room?.capacity;
+
+    jest.spyOn(enrollmentRepository, 'findWithAddressByUserId').mockResolvedValue(enrollment);
+    jest
+      .spyOn(ticketsRepository, 'findTicketByEnrollmentId')
+      .mockResolvedValue(buildTicket(enrollment.id, TicketStatus.PAID, ticketType));
+    jest.spyOn(roomRepository, 'getRoomById').mockResolvedValue(room);
+    jest.spyOn(bookingRepository, 'countBookingsByRoomId').mockResolvedValue(countBookingsByRoom);
+    jest.spyOn(bookingRepository, 'createBooking').mockResolvedValue(bookingId);
+
+    const userId = enrollment.userId;
+    const roomId = room?.id;
+    const promise = bookingService.createBooking(userId, roomId);
+
+    expect(promise).rejects.toEqual(
+      expect.objectContaining({
+        name: 'ForbiddenError',
+      }),
+    );
+  });
 });
