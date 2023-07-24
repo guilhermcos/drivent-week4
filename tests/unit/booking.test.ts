@@ -4,7 +4,14 @@ import enrollmentRepository from '@/repositories/enrollment-repository';
 import ticketsRepository from '@/repositories/tickets-repository';
 import { TicketStatus } from '@prisma/client';
 import roomRepository from '@/repositories/room-repository';
-import { buildBooking, buildEnrollmentWithAdress, buildRoom, buildTicket, buildTicketType } from '../factories';
+import {
+  buildBooking,
+  buildBookingWithRooms,
+  buildEnrollmentWithAdress,
+  buildRoom,
+  buildTicket,
+  buildTicketType,
+} from '../factories';
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -169,40 +176,71 @@ describe('PUT /booking/:id unit tests', () => {
     const roomSecond = buildRoom();
     const countBookingsByRoom = 0;
 
-    jest.spyOn(bookingRepository, 'findBookingWithRooms').mockResolvedValue(buildBooking(options: { bookingId }));
+    jest
+      .spyOn(bookingRepository, 'findBookingWithRooms')
+      .mockResolvedValue(buildBookingWithRooms({ bookingId, roomId: roomFirst.id }));
     jest.spyOn(enrollmentRepository, 'findWithAddressByUserId').mockResolvedValue(enrollment);
     jest
       .spyOn(ticketsRepository, 'findTicketByEnrollmentId')
       .mockResolvedValue(buildTicket(enrollment.id, TicketStatus.PAID, ticketType));
-    jest.spyOn(roomRepository, 'getRoomById').mockResolvedValue(room);
+    jest.spyOn(roomRepository, 'getRoomById').mockResolvedValue(roomSecond);
     jest.spyOn(bookingRepository, 'countBookingsByRoomId').mockResolvedValue(countBookingsByRoom);
-    jest.spyOn(bookingRepository, 'createBooking').mockResolvedValue(bookingId);
+    jest.spyOn(bookingRepository, 'updateBooking').mockResolvedValue(bookingId);
 
     const userId = enrollment.userId;
-    const roomId = room.id;
-    const result = await bookingService.createBooking(userId, roomId);
+    const result = await bookingService.updateBooking(userId, roomSecond.id);
 
     expect(result).toBe(bookingId);
   });
 
-  it('should throw Not Found room not found', async () => {
+  it('should throw forbidden error when user has no booking', async () => {
     const ticketType = buildTicketType();
     const enrollment = buildEnrollmentWithAdress();
     const bookingId = 4;
-    const room: any = null;
-    const countBookingsByRoom = room?.capacity - 2;
+    const roomFirst = buildRoom();
+    const roomSecond = buildRoom();
+    const countBookingsByRoom = 0;
 
+    jest.spyOn(bookingRepository, 'findBookingWithRooms').mockResolvedValue(null);
     jest.spyOn(enrollmentRepository, 'findWithAddressByUserId').mockResolvedValue(enrollment);
     jest
       .spyOn(ticketsRepository, 'findTicketByEnrollmentId')
       .mockResolvedValue(buildTicket(enrollment.id, TicketStatus.PAID, ticketType));
-    jest.spyOn(roomRepository, 'getRoomById').mockResolvedValue(room);
+    jest.spyOn(roomRepository, 'getRoomById').mockResolvedValue(roomSecond);
     jest.spyOn(bookingRepository, 'countBookingsByRoomId').mockResolvedValue(countBookingsByRoom);
-    jest.spyOn(bookingRepository, 'createBooking').mockResolvedValue(bookingId);
+    jest.spyOn(bookingRepository, 'updateBooking').mockResolvedValue(bookingId);
 
     const userId = enrollment.userId;
-    const roomId = room?.id;
-    const promise = bookingService.createBooking(userId, roomId);
+    const promise = bookingService.updateBooking(userId, roomSecond.id);
+
+    expect(promise).rejects.toEqual(
+      expect.objectContaining({
+        name: 'ForbiddenError',
+      }),
+    );
+  });
+
+  it('should throw Not Found when room not found', async () => {
+    const ticketType = buildTicketType();
+    const enrollment = buildEnrollmentWithAdress();
+    const bookingId = 4;
+    const roomFirst = buildRoom();
+    const roomSecond = buildRoom();
+    const countBookingsByRoom = 0;
+
+    jest
+      .spyOn(bookingRepository, 'findBookingWithRooms')
+      .mockResolvedValue(buildBookingWithRooms({ bookingId, roomId: roomFirst.id }));
+    jest.spyOn(enrollmentRepository, 'findWithAddressByUserId').mockResolvedValue(enrollment);
+    jest
+      .spyOn(ticketsRepository, 'findTicketByEnrollmentId')
+      .mockResolvedValue(buildTicket(enrollment.id, TicketStatus.PAID, ticketType));
+    jest.spyOn(roomRepository, 'getRoomById').mockResolvedValue(null);
+    jest.spyOn(bookingRepository, 'countBookingsByRoomId').mockResolvedValue(countBookingsByRoom);
+    jest.spyOn(bookingRepository, 'updateBooking').mockResolvedValue(bookingId);
+
+    const userId = enrollment.userId;
+    const promise = bookingService.updateBooking(userId, roomSecond.id);
 
     expect(promise).rejects.toEqual(
       expect.objectContaining({
@@ -215,20 +253,23 @@ describe('PUT /booking/:id unit tests', () => {
     const ticketType = buildTicketType();
     const enrollment = buildEnrollmentWithAdress();
     const bookingId = 4;
-    const room = buildRoom();
-    const countBookingsByRoom = room?.capacity - 2;
+    const roomFirst = buildRoom();
+    const roomSecond = buildRoom();
+    const countBookingsByRoom = 0;
 
+    jest
+      .spyOn(bookingRepository, 'findBookingWithRooms')
+      .mockResolvedValue(buildBookingWithRooms({ bookingId, roomId: roomFirst.id }));
     jest.spyOn(enrollmentRepository, 'findWithAddressByUserId').mockResolvedValue(enrollment);
     jest
       .spyOn(ticketsRepository, 'findTicketByEnrollmentId')
       .mockResolvedValue(buildTicket(enrollment.id, TicketStatus.RESERVED, ticketType));
-    jest.spyOn(roomRepository, 'getRoomById').mockResolvedValue(room);
+    jest.spyOn(roomRepository, 'getRoomById').mockResolvedValue(roomSecond);
     jest.spyOn(bookingRepository, 'countBookingsByRoomId').mockResolvedValue(countBookingsByRoom);
-    jest.spyOn(bookingRepository, 'createBooking').mockResolvedValue(bookingId);
+    jest.spyOn(bookingRepository, 'updateBooking').mockResolvedValue(bookingId);
 
     const userId = enrollment.userId;
-    const roomId = room?.id;
-    const promise = bookingService.createBooking(userId, roomId);
+    const promise = bookingService.updateBooking(userId, roomSecond.id);
 
     expect(promise).rejects.toEqual(
       expect.objectContaining({
@@ -241,20 +282,23 @@ describe('PUT /booking/:id unit tests', () => {
     const ticketType = buildTicketType();
     const enrollment = buildEnrollmentWithAdress();
     const bookingId = 4;
-    const room = buildRoom();
-    const countBookingsByRoom = room?.capacity;
+    const roomFirst = buildRoom();
+    const roomSecond = buildRoom();
+    const countBookingsByRoom = roomSecond.capacity;
 
+    jest
+      .spyOn(bookingRepository, 'findBookingWithRooms')
+      .mockResolvedValue(buildBookingWithRooms({ bookingId, roomId: roomFirst.id }));
     jest.spyOn(enrollmentRepository, 'findWithAddressByUserId').mockResolvedValue(enrollment);
     jest
       .spyOn(ticketsRepository, 'findTicketByEnrollmentId')
       .mockResolvedValue(buildTicket(enrollment.id, TicketStatus.PAID, ticketType));
-    jest.spyOn(roomRepository, 'getRoomById').mockResolvedValue(room);
+    jest.spyOn(roomRepository, 'getRoomById').mockResolvedValue(roomSecond);
     jest.spyOn(bookingRepository, 'countBookingsByRoomId').mockResolvedValue(countBookingsByRoom);
-    jest.spyOn(bookingRepository, 'createBooking').mockResolvedValue(bookingId);
+    jest.spyOn(bookingRepository, 'updateBooking').mockResolvedValue(bookingId);
 
     const userId = enrollment.userId;
-    const roomId = room?.id;
-    const promise = bookingService.createBooking(userId, roomId);
+    const promise = bookingService.updateBooking(userId, roomSecond.id);
 
     expect(promise).rejects.toEqual(
       expect.objectContaining({
