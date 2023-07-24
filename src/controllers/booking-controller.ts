@@ -17,3 +17,12 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
   const result = await bookingService.createBooking(userId, roomId);
   res.status(httpStatus.OK).send({ bookingId: result });
 }
+
+export async function updateBooking(req: AuthenticatedRequest, res: Response) {
+  const userId = req.userId;
+  const { roomId }: { roomId: number } = req.body;
+
+  const result = await bookingService.updateBooking(userId, roomId);
+
+  res.status(httpStatus.OK).send({ bookingId: result });
+}

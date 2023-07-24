@@ -1,5 +1,28 @@
 import { Booking, Room, User } from '@prisma/client';
 import { prisma } from '@/config';
+import { faker } from '@faker-js/faker';
+
+type BookingOptions = {
+  bookingId?: number;
+  roomId?: number;
+  userId?: number;
+};
+
+export function buildBooking(options: BookingOptions = {}): Booking {
+  const {
+    bookingId = faker.datatype.number(),
+    roomId = faker.datatype.number(),
+    userId = faker.datatype.number(),
+  } = options;
+
+  return {
+    id: bookingId,
+    userId: userId,
+    roomId: roomId,
+    createdAt: faker.date.past(),
+    updatedAt: faker.date.past(),
+  };
+}
 
 export async function createBooking(user: User, room: Room) {
   const booking = await prisma.booking.create({
